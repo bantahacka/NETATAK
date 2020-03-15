@@ -106,7 +106,8 @@ def show_banner_opts():
     --------
      ATTACK
     --------""".format(R))
-    print("{0}[3] ARP Man-In-The-Middle".format(M))
+    print("{0}[3] Start ARP Man-In-The-Middle".format(M))
+    print("{0}[4] Stop ARP Man-In-The-Middle".format(M))
     print("""{0}
     ------
      MISC
