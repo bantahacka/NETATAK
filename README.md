@@ -1,6 +1,6 @@
 # NETATAK
 NETATAK - A suite of network scanning and attack tools.
-version: 0.1b
+version: 0.2b
 
 Supported OS: Windows
 
