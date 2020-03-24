@@ -9,4 +9,4 @@ Supported Python Version:
 
 #TODO:
 1) Create DNS Poison Attack Tool
-2) Create Linux compatible version
+2) Add Linux compatibility - Done for arp_mitm.py
