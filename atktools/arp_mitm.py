@@ -22,6 +22,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # default gateway for the network, forwarding traffic to the real default gateway.
 
 import sys
+import os
+import platform
 from scapy.all import *
 from netscanner import netscan_main
 
@@ -65,6 +67,52 @@ class arp_mitm:
 
     def start_arp_mitm(self):
         print("{0}[*] Starting ARP MITM attack...".format(N))
+        #Get OS name
+        osname = os.name
+        osver = platform.release()
+        if osname == 'nt' and osver == '7' or osver == '8' or osver == '8.1' or osver == '10':
+            #Check IP Routing service. If the service is not running, start it
+            iprouting_query = ['sc', 'query', 'RemoteAccess']
+            cmd_result = subprocess.Popen(iprouting_query, stdout=subprocess.PIPE)
+            cmd_result = cmd_result.stdout.read()
+            if b"STOPPED" in cmd_result:
+                iprouting_start = ['sc', 'start', 'RemoteAccess']
+                cmd_result = subprocess.Popen(iprouting_start, stdout=subprocess.PIPE)
+                print("{0}[*] Starting Routing and Remote Access Service...".format(B))
+                time.sleep(3)
+                cmd_result = subprocess.Popen(iprouting_query, stdout=subprocess.PIPE)
+                cmd_result = cmd_result.stdout.read()
+                if b"STARTED" in cmd_result:
+                    print("{0}[*] Routing and Remote Access Service started, continuing...".format(G))
+                elif b"STARTING" in cmd_result:
+                    while b"STARTING" in cmd_result:
+                        time.sleep(2)
+                        cmd_result = subprocess.Popen(iprouting_query, stdout=subprocess.PIPE)
+                        cmd_result = cmd_result.stdout.read()
+                        if b"STARTED" in cmd_result:
+                            print("{0}[*] Routing and Remote Access Service started, continuing...".format(G))
+                            break
+                else:
+                    print("{0}Unable to start Routing and Remote Access Service, exiting...".format(R))
+                    return False
+            elif b"STARTED" in cmd_result:
+                print("{0}[*] Routing and Remote Access Service started, continuing...".format(G))
+        if osname == 'linux':
+            #Enable IP Forwarding
+            ipforward_file = "/proc/sys/net/ipv4/ip_forward"
+            f = open(ipforward_file, "w")
+            result = f.read()
+            if result == "1":
+                print("{0}[*] IP Forwarding already started, continuing...".format(G))
+                f.close()
+            elif result is not "1":
+                if result is "0" or not "":
+                    os.remove(ipforward_file)
+                    f = open(ipforward_file, "w")
+                print("{0}[*] Starting IP Forwarding...".format(B))
+                f.write("1")
+                print("{0}[*] IP Forwarding started, file {1} modified. Continuing...".format(G, ipforward_file))
+                f.close()
         try:
             for i in self.tgt_list:
                 result = self.tgt_list[i].split('-')
@@ -84,5 +132,52 @@ class arp_mitm:
                 print("{0}[*]Target %s restored".format(G) % result[1])
         except Exception:
             print("{0}[*] Unable to restore target %s".format(R) % result[1])
+
+        osname = os.name
+        osver = platform.release()
+        if osname == 'nt' and osver == '7' or osver == '8' or osver == '8.1' or osver == '10':
+            # Stop the IP Routing service
+            iprouting_query = ['sc', 'query', 'RemoteAccess']
+            cmd_result = subprocess.Popen(iprouting_query, stdout=subprocess.PIPE)
+            cmd_result = cmd_result.stdout.read()
+            if b"STARTED" in cmd_result:
+                iprouting_stop = ['sc', 'stop', 'RemoteAccess']
+                cmd_result = subprocess.Popen(iprouting_stop, stdout=subprocess.PIPE)
+                print("{0}[*] Stopping Routing and Remote Access Service...".format(B))
+                time.sleep(3)
+                cmd_result = subprocess.Popen(iprouting_query, stdout=subprocess.PIPE)
+                cmd_result = cmd_result.stdout.read()
+                if b"STOPPED" in cmd_result:
+                    print("{0}[*] Routing and Remote Access Service stopped.".format(G))
+                elif b"STOPPING" in cmd_result:
+                    while b"STOPPING" in cmd_result:
+                        time.sleep(2)
+                        cmd_result = subprocess.Popen(iprouting_query, stdout=subprocess.PIPE)
+                        cmd_result = cmd_result.stdout.read()
+                        if b"STOPPED" in cmd_result:
+                            print("{0}[*] Routing and Remote Access Service stopped.".format(G))
+                            break
+                else:
+                    print("{0}Unable to stop Routing and Remote Access Service, please manually stop it in Services.".format(R))
+                    return False
+            elif b"STOPPED" in cmd_result:
+                print("{0}[*] Routing and Remote Access Service stopped.".format(G))
+        if osname == 'linux':
+            # Disable IP Forwarding
+            ipforward_file = "/proc/sys/net/ipv4/ip_forward"
+            f = open(ipforward_file, "w")
+            result = f.read()
+            if result == "0":
+                print("{0}[*] IP Forwarding stopped.".format(G))
+                f.close()
+            elif result is not "0":
+                if result is "1" or not "":
+                    os.remove(ipforward_file)
+                    f = open(ipforward_file, "w")
+                print("{0}[*] Starting IP Forwarding...".format(B))
+                f.write("0")
+                print("{0}[*] IP Forwarding stopped, file {1} modified.".format(G, ipforward_file))
+                f.close()
+
         print("{0}[*] Targets restored. Exiting...".format(G))
         return False
