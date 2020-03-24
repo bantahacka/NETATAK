@@ -16,7 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 # NETATAK - Windows Version
-# v0.1b
+# v0.2b
 # A suite of network scanning and attack tools.
 
 #import sys
@@ -92,7 +92,7 @@ def show_banner_opts():
     \|__| \|__|\|_______|   \|__|  \|__|\|__|    \|__|  \|__|\|__|\|__| \|__|                                                                             
 """.format(Y, N))
     print("{0}NETATAK - A suite of network scanning and attack tools.".format(B))
-    print("{0}Version: 0.1b".format(B))
+    print("{0}Version: 0.2b".format(B))
 
     print("\r\n")
     print("{0}Available options:".format(M))
