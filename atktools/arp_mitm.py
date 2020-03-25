@@ -100,7 +100,7 @@ class arp_mitm:
         if osname == 'linux':
             #Enable IP Forwarding
             ipforward_file = "/proc/sys/net/ipv4/ip_forward"
-            f = open(ipforward_file, "w")
+            f = open(ipforward_file, "r")
             result = f.read()
             if result == "1":
                 print("{0}[*] IP Forwarding already started, continuing...".format(G))
@@ -165,7 +165,7 @@ class arp_mitm:
         if osname == 'linux':
             # Disable IP Forwarding
             ipforward_file = "/proc/sys/net/ipv4/ip_forward"
-            f = open(ipforward_file, "w")
+            f = open(ipforward_file, "r")
             result = f.read()
             if result == "0":
                 print("{0}[*] IP Forwarding stopped.".format(G))
