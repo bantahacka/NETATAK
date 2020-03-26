@@ -15,17 +15,18 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-# ICMP Host Scanner - Windows Version
+# ICMP Host Scanner
 # Scans for host(s) on a given network using ICMP
 # This module is used to scan a single IP or network for hosts via ICMP
 # Ping count, timeout and packet interval can be adjusted when initiating the scan
 
+import time
 from scapy.all import *
 
 # Define text colours
 B, R, Y, G, M, N = '\33[94m', '\033[91m', '\33[93m', '\033[1;32m', '\033[1;35m', '\033[0m'
 
-
+# Define the class
 class ICMPscanner:
     def __init__(self, target, count, timeout, pktinterval):
         self.target = target
@@ -35,6 +36,7 @@ class ICMPscanner:
         self.active_hosts = []
 
     def icmpscan(self):
+        # Run an ICMP scan against the target machine/network and report any hosts that are alive.
         print("{0}[*] Running %d ICMP scan(s) against %s with a packet interval of %4.1fs and a timeout of %ds".format(N) % (self.count, self.target, self.pktinterval, self.timeout))
         try:
             for i in range(self.count):

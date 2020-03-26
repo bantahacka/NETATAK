@@ -16,23 +16,30 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 # NETATAK - Windows Version
-# v0.2.1b
+# v0.2.2b
 # A suite of network scanning and attack tools.
 
-#import sys
-#import time
-#import os
-#import subprocess
+import sys
+import time
+import os
+import subprocess
 import ipaddress
-from atktools import *
-from netscanner import *
+import platform
+from atktools import arp_mitm
+from netscanner import netscan_main
 
 
 # Define text colours
 B, R, Y, G, M, N = '\33[94m', '\033[91m', '\33[93m', '\033[1;32m', '\033[1;35m', '\033[0m'
 
+# Linux only: Check to see if user is running as root
+if platform.system() == 'Linux':
+    if os.geteuid() != 0:
+        print("{0}[*] Error: You must run this script using sudo or as root. Exiting...")
+        sys.exit()
 
 def module_installer():
+    # Function to install scapy
     print("[*] Error: The following module is required for this program to run:")
     print("[-] scapy")
     mod_inst = input("[*] Do you wish to install it? (Y/N)".lower())
@@ -59,7 +66,6 @@ def main():
 
 
 def get_input():
-
     # Capture user input
     while True:
         capture_opt = input("{0}[*] Choose from the list above: ".format(N))
@@ -82,6 +88,7 @@ def get_input():
 
 
 def show_banner_opts():
+    # Print the banner and show the available options
     print(r"""{0}{1}
  ________   _______  _________  ________  _________  ________  ___  __
 |\   ___  \|\  ___ \|\___   ___\\   __  \|\___   ___\\   __  \|\  \|\  \
@@ -92,7 +99,7 @@ def show_banner_opts():
     \|__| \|__|\|_______|   \|__|  \|__|\|__|    \|__|  \|__|\|__|\|__| \|__|                                                                             
 """.format(Y, N))
     print("{0}NETATAK - A suite of network scanning and attack tools.".format(B))
-    print("{0}Version: 0.2.1b".format(B))
+    print("{0}Version: 0.2.2b".format(B))
 
     print("\r\n")
     print("{0}Available options:".format(M))
@@ -117,6 +124,7 @@ def show_banner_opts():
 
 
 def option_selector(opt):
+    # Run the required tool based on user input
     if opt == 1:
         arp_scan()
     if opt == 2:
@@ -128,6 +136,7 @@ def option_selector(opt):
 
 
 def tgt_input(input_opt):
+    # Function to capture target input
     while True:
         if input_opt == "scan":
             opt_tgt = input("{0}[*] Specify a single target (e.g. 192.168.1.10), or a range of targets using slash notation (e.g. 192.168.1.0/25): ".format(N))
@@ -156,6 +165,7 @@ def tgt_input(input_opt):
 
 
 def timeout_input():
+    # Function to capture packet timeout input
     while True:
         opt_timeout = input("{0}[*] Define a timeout for replies in seconds between 1 and 100 (e.g. 2), or leave blank for the default setting (1 second): ".format(N))
         if not opt_timeout:
@@ -176,6 +186,7 @@ def timeout_input():
 
 
 def interval_input():
+    # Function to capture packet interval input
     while True:
         opt_interval = input("{0}[*] Define an interval between packets in seconds between 0.1 and 50 (e.g. 0.4, 1), or leave blank for the default setting (0.1 second): ".format(N))
         if not opt_interval:
@@ -196,6 +207,7 @@ def interval_input():
 
 
 def scan_count():
+    # Function to capture scan count input
     while True:
         opt_count = input("{0}[*] Define how many scans should be made against the target(s) (up to 65535), or leave blank for the default setting (1 packet): ".format(N))
         if not opt_count:
@@ -216,6 +228,7 @@ def scan_count():
 
 
 def arp_scan():
+    # Start ARP scan tool
     opt_tgt = tgt_input("scan")
     opt_timeout = timeout_input()
     opt_interval = interval_input()
@@ -227,6 +240,7 @@ def arp_scan():
 
 
 def icmp_scan():
+    # Start ICMP scan tool
     opt_tgt = tgt_input("scan")
     opt_timeout = timeout_input()
     opt_interval = interval_input()
@@ -239,6 +253,7 @@ def icmp_scan():
 
 
 def arp_mitm_start():
+    # Start ARP MITM tool
     opt_tgt = tgt_input("scan")
     opt_rtr = tgt_input("rtr")
     opt_timeout = timeout_input()
@@ -251,6 +266,7 @@ def arp_mitm_start():
 
 
 def arp_mitm_stop():
+    # Stop ARP MITM tool
     opt_tgt = tgt_input("scan")
     opt_rtr = tgt_input("rtr")
     opt_timeout = timeout_input()

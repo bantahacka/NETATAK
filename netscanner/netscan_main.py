@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from .arpscan import *
 from .icmpscan import *
 
+
+# Define the class
 class netscanner:
     def __init__(self, scantype, target, timeout, pktintr, count=1, inc_mac=0):
         self.scantype = scantype
@@ -31,6 +33,7 @@ class netscanner:
         self.inc_mac = inc_mac
 
     def init_scan(self):
+        # This function invokes the required scan when netscanner is called
         if self.scantype == 1:
             newARPScan = ARPscanner(self.target, self.timeout, self.pktintr, self.inc_mac)
             tgt_list = newARPScan.arpscan()
