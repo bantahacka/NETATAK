@@ -9,7 +9,7 @@ Supported Python Version:
 
 #TODO:
 1) Create DNS Poison Attack Tool
-2) Add Linux compatibility - Done for arp_mitm.py
+2) And more....
 
 Disclaimer: NETATAK has been developed for educational and testing purposes only.
 It must not be used in production environments unless explicit permission has been granted e.g. for penetration testing.
