@@ -33,10 +33,9 @@ from netscanner import netscan_main
 B, R, Y, G, M, N = '\33[94m', '\033[91m', '\33[93m', '\033[1;32m', '\033[1;35m', '\033[0m'
 
 #Check to see if user is running as root
-if platform.system() == 'Linux':
-    if os.geteuid() != 0:
-        print("{0}[*] Error: You must run this script using sudo or as root. Exiting...".format(R))
-        sys.exit()
+if os.geteuid() != 0:
+    print("{0}[*] Error: You must run this script using sudo or as root. Exiting...".format(R))
+    sys.exit()
 
 def module_installer():
     # Function to install scapy
