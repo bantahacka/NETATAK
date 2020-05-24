@@ -77,7 +77,7 @@ class netatak:
                             B))
                     continue
                 else:
-                    print("[*] Error: Invalid option entered")
+                    print("{0}[*] Error: Invalid option entered".format(R))
                     continue
 
     def show_banner_opts(self):
