@@ -21,38 +21,49 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # Timeout and interval can be adjusted when initiating the scan
 
 from scapy.all import *
+import ipaddress
 
 # Define text colours
 B, R, Y, G, M, N = '\33[94m', '\033[91m', '\33[93m', '\033[1;32m', '\033[1;35m', '\033[0m'
 
 # Define the class
 class ARPscanner:
-    def __init__(self, target, timeout, interval, inc_mac):
+    def __init__(self, target, timeout, interval, inc_mac, count):
         self.target = target
+        self.count = count
         self.timeout = timeout
         self.interval = interval
         self.inc_mac = inc_mac
+        self.active_hosts = []
         self.ipdict = {}
 
     def arpscan(self):
-        print("{0}[*] Running ARP scan against %s".format(N) % self.target)
+        print("{0}[*] Running %d ARP scan(s) against %s with an interval of %4.1fs and a timeout of %ds".format(N) % (self.count, self.target, self.interval, self.timeout))
         # Run an ARP scan against the target machine/network. If machine responds, output the IP that responded. Build a target list if inc_mac is set to 1
+        total_resps = 0
+        total_scans = 0
+
         try:
-            ans,unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=self.target, hwdst="ff:ff:ff:ff:ff:ff"), verbose=0, inter=self.interval, timeout=self.timeout)
-            if ans:
-                for i in range(0, len(ans)):
-                    for rcv, snd in ans:
-                        ipaddr = snd.sprintf(r"%ARP.psrc%")
+            for i in range(self.count):
+                total_scans = i+1
+                ans, unans = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=self.target), verbose=0, inter=self.interval, timeout=self.timeout)
+                for snd, rcv in ans:
+                    ipaddr = rcv.sprintf(r"%ARP.psrc%")
+                    print("{0}[*] {1} responded to ARP request.".format(G, ipaddr))
+                    if ipaddr not in self.active_hosts:
+                        self.active_hosts.append(ipaddr)
+                        total_resps += 1
                         if self.inc_mac == 1:
-                            ipmac = snd.sprintf(r"%Ether.src%")
-                            self.ipdict[i] = ipaddr + '-' + ipmac
-                        print("{0}[*] {1} responded to ARP request.".format(G, ipaddr))
-                if self.inc_mac == 1 and len(self.ipdict) > 0:
-                    print("{0}[*] Target(s) responded to ARP request. Target list generated.".format(G))
-                    return self.ipdict
-            else:
-                print("{0}[*] Target(s) did not respond to ARP request.".format(R))
+                            ipmac = rcv.sprintf(r"%Ether.src%")
+                            self.ipdict[total_resps] = ipaddr + '-' + ipmac
+                print("{0}[*] {1} Target(s) responded to ARP".format(G, total_resps))
+                print("{0}[*] Scans completed: {1} of {2}".format(G, total_scans, self.count))
+            if len(self.ipdict) == 0:
+                print("{0}[*] No targets found via ARP. Exiting...".format(R))
                 return False
+            if self.inc_mac == 1 and len(self.ipdict) > 0:
+                print("{0}[*] Target(s) responded to ARP request. Target list generated.".format(G))
+                return self.ipdict
         except KeyboardInterrupt:
             print("{0}[*] ARP Scan cancelled by user.".format(R))
             return False

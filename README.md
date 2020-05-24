@@ -1,15 +1,15 @@
 # NETATAK
 NETATAK - A suite of network scanning and attack tools.
-Version: 0.2.2b
+Version: 0.3b
 
-Supported OS: Windows
+Supported OS: Linux
 
 Supported Python Version:
 3.4 or greater
 
 #TODO:
 1) Create DNS Poison Attack Tool
-2) Add Linux compatibility - Done for arp_mitm.py
+2) ARP MITM tool - Output forwarded traffic to a PCAP file for later analysis in Wireshark
 
 Disclaimer: NETATAK has been developed for educational and testing purposes only.
 It must not be used in production environments unless explicit permission has been granted e.g. for penetration testing.

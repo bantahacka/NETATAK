@@ -35,7 +35,7 @@ class netscanner:
     def init_scan(self):
         # This function invokes the required scan when netscanner is called
         if self.scantype == 1:
-            newARPScan = ARPscanner(self.target, self.timeout, self.pktintr, self.inc_mac)
+            newARPScan = ARPscanner(self.target, self.timeout, self.pktintr, self.inc_mac, self.count)
             tgt_list = newARPScan.arpscan()
             return tgt_list
         elif self.scantype == 2:
