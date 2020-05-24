@@ -9,7 +9,9 @@ Supported Python Version:
 
 #TODO:
 1) Create DNS Spoofing Tool
-2) ARP MITM tool - Output forwarded traffic to a PCAP file for later analysis in Wireshark
+2) Add new scanners: SYN, SYN/ACK, TCP ports, UDP ports
+3) Tidy up NETATAK class
+4) ARP MITM tool - Output forwarded traffic to a PCAP file for later analysis in Wireshark
 
 Disclaimer: NETATAK has been developed for educational and testing purposes only.
 It must not be used in production environments unless explicit permission has been granted e.g. for penetration testing.
