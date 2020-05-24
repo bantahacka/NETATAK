@@ -8,7 +8,7 @@ Supported Python Version:
 3.4 or greater
 
 #TODO:
-1) Create DNS Poison Attack Tool
+1) Create DNS Spoofing Tool
 2) ARP MITM tool - Output forwarded traffic to a PCAP file for later analysis in Wireshark
 
 Disclaimer: NETATAK has been developed for educational and testing purposes only.
