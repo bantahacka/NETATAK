@@ -25,6 +25,7 @@ import os
 import subprocess
 import ipaddress
 import platform
+import threading
 from atktools import arp_mitm
 from netscanner import netscan_main
 
@@ -37,24 +38,32 @@ if os.geteuid() != 0:
     print("{0}[*] Error: You must run this script using sudo or as root. Exiting...".format(R))
     sys.exit()
 
-def module_installer():
-    # Function to install scapy
+def module_installer(mod_name):
+    # Function to install required modules
     print("{0}[*] Error: The following module is required for this program to run:".format(Y))
-    print("{0}[-] scapy".format(R))
+    print("{0}[-] {1}".format(R, mod_name))
     mod_inst = input("{0}[*] Do you wish to install it? (Y/N)".lower().format(Y))
     if mod_inst in ('y', 'yes'):
-        print("{0}[*] Installing scapy, going to sleep for 30 seconds...".format(B))
-        subprocess.Popen("python3 -m pip install scapy -y", shell=True)
+        print("{0}[*] Installing {1}, going to sleep for 30 seconds...".format(B, mod_name))
+        subprocess.Popen("python3 -m pip install {0}} -y".format(mod_name), shell=True)
         time.sleep(30)
         print("{0}[*] Please restart NETATAK.".format(R))
+        sys.exit()
 
 
 # Try and import scapy. If not installed, use pip to install the package
 try:
     from scapy.all import *
+    print("{0}[*] Importing scapy...".format(B))
 except ImportError:
-    module_installer()
+    module_installer("scapy")
 
+# Try and import netfilterqueue. If not installed, use pip to install the package
+try:
+    from netfilterqueue import *
+    print("{0}[*] Importing netfilterqueue...".format(B))
+except ImportError:
+    module_installer("netfilterqueue")
 
 class netatak:
     def get_input(self):
@@ -140,7 +149,6 @@ class netatak:
                 print(err.format(R))
                 continue
             else:
-
                 try:
                     if ipaddress.ip_address(opt_tgt):
                         break
