@@ -16,7 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 # NETATAK
-# v0.3b
+# v0.4b
 # A suite of network scanning and attack tools.
 
 import sys
@@ -25,7 +25,7 @@ import os
 import subprocess
 import ipaddress
 import platform
-from atktools import arp_mitm
+from atktools import arp_mitm, dnspoof
 from netscanner import netscan_main
 
 
@@ -65,7 +65,7 @@ class netatak:
                 continue
             try:
                 capture_opt = int(capture_opt)
-                if 0 < capture_opt <= 3:
+                if 0 < capture_opt <= 4:
                     return capture_opt
                 else:
                     print("{0}[*] Error: Invalid option entered".format(R))
@@ -107,6 +107,7 @@ class netatak:
          ATTACK
         --------""".format(R))
         print("{0}[3] ARP Man-In-The-Middle".format(M))
+        print("{0}[4] DNS Spoofer".format(M))
         print("""{0}
         ------
          MISC
@@ -122,6 +123,8 @@ class netatak:
             self.icmp_scan()
         if opt == 3:
             self.arp_mitm_start()
+        if opt == 4:
+            self.dnspoof_start()
 
 
     def tgt_input(self, input_opt):
@@ -132,6 +135,10 @@ class netatak:
                     "{0}[*] Specify a single target (e.g. 192.168.1.10), or a range of targets using slash notation (e.g. 192.168.1.0/25): ".format(
                         N))
                 err = "{0}[*] Error: no target defined."
+            elif input_opt == "atk":
+                opt_tgt = input(
+                    "{0}[*] Specify a single target (e.g. 192.168.1.10): ".format(
+                        N))
             elif input_opt == "rtr":
                 opt_tgt = input("{0}[*] Specify the default gateway used by the targets (e.g. 192.168.1.1): ".format(N))
                 err = "{0}[*] Error: no default gateway defined."
@@ -140,7 +147,6 @@ class netatak:
                 print(err.format(R))
                 continue
             else:
-
                 try:
                     if ipaddress.ip_address(opt_tgt):
                         break
@@ -255,13 +261,25 @@ class netatak:
 
     def arp_mitm_start(self):
         # Start ARP MITM tool
-        opt_tgt = self.tgt_input("scan")
+        opt_tgt = self.tgt_input("atk")
         opt_rtr = self.tgt_input("rtr")
         opt_timeout = self.timeout_input("arp")
         opt_interval = self.interval_input()
 
         new_arp_mitm = arp_mitm.arp_mitm(opt_tgt, opt_rtr, 0, opt_timeout, opt_interval)
         new_arp_mitm.find_targets()
+        time.sleep(5)
+        self.main()
+
+    def dnspoof_start(self):
+        # Start the DNS Spoofing tool
+        opt_tgt = self.tgt_input("atk")
+        opt_rtr = self.tgt_input("rtr")
+        opt_timeout = self.timeout_input("arp")
+        opt_interval = self.interval_input()
+
+        new_dnspoof = dnspoof.dnspoof(opt_tgt, opt_rtr, 0, opt_timeout, opt_interval)
+        new_dnspoof.start_spoofer()
         time.sleep(5)
         self.main()
 

