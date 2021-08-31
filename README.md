@@ -1,6 +1,6 @@
 # NETATAK
 NETATAK - A suite of network scanning and attack tools.
-Version: 0.3b
+Version: 0.4b
 
 Supported OS: Linux
 
@@ -8,10 +8,9 @@ Supported Python Version:
 3.4 or greater
 
 #TODO:
-1) Create DNS Spoofing Tool
-2) Add new scanners: SYN, SYN/ACK, TCP ports, UDP ports
-3) Tidy up NETATAK class
-4) ARP MITM tool - Output forwarded traffic to a PCAP file for later analysis in Wireshark
+1) Add new scanners: SYN, SYN/ACK, TCP ports, UDP ports
+2) Tidy up NETATAK class
+3) ARP MITM tool - Output forwarded traffic to a PCAP file for later analysis in Wireshark
 
 Disclaimer: NETATAK has been developed for educational and testing purposes only.
 It must not be used in production environments unless explicit permission has been granted e.g. for penetration testing.
