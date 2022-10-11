@@ -25,9 +25,6 @@ import os
 import subprocess
 import ipaddress
 import platform
-from atktools import arp_mitm, dnspoof
-from netscanner import netscan_main
-
 
 # Define text colours
 B, R, Y, G, N = '\033[1;34m', '\033[1;31m', '\033[1;33m', '\033[1;32m', '\033[1;37m'
@@ -43,18 +40,22 @@ def module_installer():
     print("{0}[-] scapy".format(R))
     mod_inst = input("{0}[*] Do you wish to install it? (Y/N)".lower().format(Y))
     if mod_inst in ('y', 'yes'):
+        print("{0}[*] If the install of Scapy fails, ensure you have the pip module installed")
         print("{0}[*] Installing scapy, going to sleep for 30 seconds...".format(B))
-        subprocess.Popen("python3 -m pip install scapy -y", shell=True)
+        subprocess.Popen("python3 -m pip install scapy", shell=True)
         time.sleep(30)
         print("{0}[*] Please restart NETATAK.".format(R))
+        sys.exit()
 
 
 # Try and import scapy. If not installed, use pip to install the package
 try:
     from scapy.all import *
-except ImportError:
+except (ModuleNotFoundError, ImportError):
     module_installer()
 
+from atktools import arp_mitm, dnspoof
+from netscanner import netscan_main
 
 class netatak:
     def get_input(self):

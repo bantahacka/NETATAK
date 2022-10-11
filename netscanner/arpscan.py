@@ -58,6 +58,10 @@ class ARPscanner:
                             self.ipdict[total_resps] = ipaddr + '-' + ipmac
                 print("{0}[*] {1} Target(s) responded to ARP".format(G, total_resps))
                 print("{0}[*] Scans completed: {1} of {2}".format(G, total_scans, self.count))
+                if total_scans < self.count:
+                    continue;
+                if self.inc_mac == 0:
+                    return True;
             if len(self.ipdict) == 0:
                 print("{0}[*] No targets found via ARP. Exiting...".format(R))
                 return False
