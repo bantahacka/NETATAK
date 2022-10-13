@@ -24,18 +24,19 @@ from .icmpscan import *
 
 # Define the class
 class netscanner:
-    def __init__(self, scantype, target, timeout, pktintr, count=1, inc_mac=0):
+    def __init__(self, scantype, target, timeout, pktintr, count=1, inc_mac=0, verbose=1):
         self.scantype = scantype
         self.target = target
         self.count = count
         self.timeout = timeout
         self.pktintr = pktintr
         self.inc_mac = inc_mac
+        self.verbose = verbose
 
     def init_scan(self):
         # This function invokes the required scan when netscanner is called
         if self.scantype == 1:
-            newARPScan = ARPscanner(self.target, self.timeout, self.pktintr, self.inc_mac, self.count)
+            newARPScan = ARPscanner(self.target, self.timeout, self.pktintr, self.inc_mac, self.count, self.verbose)
             tgt_list = newARPScan.arpscan()
             return tgt_list
         elif self.scantype == 2:
