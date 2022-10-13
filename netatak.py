@@ -274,6 +274,8 @@ class netatak:
 
     def dnspoof_start(self):
         # Start the DNS Spoofing tool
+        list_path = os.path.dirname(__file__) + "/atktools/config/dnspoof/spooflist.csv"
+        print("{0}[*] Ensure the target sites are updated in the CSV file located at %s. If they are not, update the list and re-run this tool. List is in the format: target_domain,ip_to_reply_with e.g. www.google.com,192.168.1.100".format(Y) % list_path)
         opt_tgt = self.tgt_input("atk")
         opt_rtr = self.tgt_input("rtr")
         opt_timeout = self.timeout_input("arp")
