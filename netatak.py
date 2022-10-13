@@ -93,7 +93,7 @@ class netatak:
         \|__| \|__|\|_______|   \|__|  \|__|\|__|    \|__|  \|__|\|__|\|__| \|__|                                                                             
     """.format(Y, N))
         print("{0}NETATAK - A suite of network scanning and attack tools.".format(B))
-        print("{0}Version: 0.3b".format(B))
+        print("{0}Version: 0.5b".format(B))
 
         print("\r\n")
         print("{0}Available options:".format(N))
