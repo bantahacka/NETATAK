@@ -114,7 +114,6 @@ class arp_mitm:
             result = self.tgt_list[i].split('-')
             send(ARP(op=2, pdst=result[0], psrc=self.rtrip, hwdst="ff:ff:ff:ff:ff:ff", hwsrc=self.rtrmac), verbose=0, count=5)
             send(ARP(op=2, pdst=self.rtrip, psrc=result[0], hwdst=self.rtrmac, hwsrc=result[1]), verbose=0, count=5)
-            time.sleep(5)
             print("{0}[*]Target %s with MAC address %s restored".format(G) % (result[0], result[1]))
 
         # Turn IP Forwarding Off.
@@ -122,4 +121,5 @@ class arp_mitm:
         os.popen("sudo echo '0' > {0}".format(self.ipforward_file))
 
         print("{0}[*] Targets restored. Exiting...".format(G))
+        time.sleep(5)
         return True
