@@ -1,13 +1,13 @@
 # NETATAK
 NETATAK - A suite of network scanning and attack tools.
-Version: 0.4b
+Version: 0.5b
 
 Supported OS: Linux
 
 Supported Python Version:
 3.4 or greater
 
-#TODO:
+# TODO:
 1) Add new scanners: SYN, SYN/ACK, TCP ports, UDP ports
 2) Tidy up NETATAK class
 3) ARP MITM tool - Output forwarded traffic to a PCAP file for later analysis in Wireshark
