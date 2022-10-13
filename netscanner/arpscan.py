@@ -24,7 +24,7 @@ from scapy.all import *
 import ipaddress
 
 # Define text colours
-B, R, Y, G, M, N = '\33[94m', '\033[91m', '\33[93m', '\033[1;32m', '\033[1;35m', '\033[0m'
+B, R, Y, G, N = '\033[1;34m', '\033[1;31m', '\033[1;33m', '\033[1;32m', '\033[1;37m'
 
 # Define the class
 class ARPscanner:
