@@ -16,7 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 # NETATAK
-# v0.4b
+# v0.5b
 # A suite of network scanning and attack tools.
 
 import sys
@@ -40,7 +40,7 @@ def module_installer():
     print("{0}[-] scapy".format(R))
     mod_inst = input("{0}[*] Do you wish to install it? (Y/N)".lower().format(Y))
     if mod_inst in ('y', 'yes'):
-        print("{0}[*] If the install of Scapy fails, ensure you have the pip module installed")
+        print("{0}[*] If the install of Scapy fails, ensure you have the python3-pip package or pip module installed.")
         print("{0}[*] Installing scapy, going to sleep for 30 seconds...".format(B))
         subprocess.Popen("python3 -m pip install scapy", shell=True)
         time.sleep(30)
@@ -290,7 +290,7 @@ class netatak:
             input_select = self.get_input()
             self.option_selector(input_select)
         except (KeyboardInterrupt, EOFError):
-            print("{0}[*] Keyboard interrupt detected. Exiting program...".format(R))
+            print("\n{0}[*] Keyboard interrupt detected. Exiting program...".format(R))
 
 
 NetAtak = netatak()
