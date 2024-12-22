@@ -165,21 +165,17 @@ class netatak:
         # Function to capture packet timeout input
         while True:
             if scantype == "arp":
-                opt_timeout = input("{0}[*] Define a timeout for replies in seconds between 10 and 100 (e.g. 2), or leave blank for the default setting (10 seconds): ".format(N))
+                timeoutRange = "10 and 100" 
+                timeoutDefault = 10
             else:
-                opt_timeout = input("{0}[*] Define a timeout for replies in seconds between 1 and 100 (e.g. 2), or leave blank for the default setting (1 second): ".format(N))
-            if not opt_timeout:
-                if scantype == "arp":
-                    opt_timeout = 10
-                else:
-                    opt_timeout = 1
+                timeoutRange = "1 and 100"
+                timeoutDefault = 1
+            opt_timeout = input("{0}[*] Define a timeout for replies in seconds between {1} (e.g. 2), \
+            or leave blank for the default setting ({2} seconds): ".format(N, timeoutRange, timeoutDefault))
+            opt_timeout = int(opt_timeout)
+            if not opt_timeout or opt_timeout == 0:
+                opt_timeout = timeoutDefault
             try:
-                opt_timeout = int(opt_timeout)
-                if opt_timeout == 0:
-                    if scantype == "arp":
-                        opt_timeout = int(10)
-                    else:
-                        opt_timeout = int(1)
                 if scantype == "arp":
                     if 10 > opt_timeout > 100:
                         print("{0}[*] Error: timeout must be between 10 and 100 seconds.".format(R))
@@ -197,13 +193,12 @@ class netatak:
     def interval_input(self):
         # Function to capture packet interval input
         while True:
+            intervalDefault = 0.1
             opt_interval = input("{0}[*] Define an interval between packets in seconds between 0.1 and 50 (e.g. 0.4, 1), or leave blank for the default setting (0.1 second): ".format(N))
-            if not opt_interval:
-                opt_interval = 0.1
+            opt_interval = float(opt_interval)
+            if not opt_interval or opt_interval == 0:
+                opt_interval = intervalDefault
             try:
-                opt_interval = float(opt_interval)
-                if opt_interval == 0:
-                    opt_interval = float(0.1)
                 if 0.1 > opt_interval > 50:
                     print("{0}[*] Error: interval must be between 0.1 and 50 seconds.".format(R))
                     continue
@@ -217,15 +212,14 @@ class netatak:
     def scan_count(self):
         # Function to capture scan count input
         while True:
+            countDefault = 1
             opt_count = input(
                 "{0}[*] Define how many scans should be made against the target(s) (up to 65535), or leave blank for the default setting (1 packet): ".format(
                     N))
-            if not opt_count:
-                opt_count = 1
+            opt_count = int(opt_count)
+            if not opt_count or opt_count == 0:
+                opt_count = countDefault
             try:
-                opt_count = int(opt_count)
-                if opt_count == 0:
-                    opt_count = int(1)
                 if 1 > opt_count > 65535:
                     print("{0}[*] Error: interval must be between 1 and 65535 seconds.".format(R))
                     continue
