@@ -16,7 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 # NETATAK
-# v0.5b
+# v0.6b
 # A suite of network scanning and attack tools.
 
 import sys
@@ -58,28 +58,19 @@ from atktools import arp_mitm, dnspoof
 from netscanner import netscan_main
 
 class netatak:
-    def get_input(self):
-        # Capture user input
-        while True:
-            capture_opt = input("{0}[*] Choose from the list above: ".format(N))
-            if not capture_opt:
-                continue
-            try:
-                capture_opt = int(capture_opt)
-                if 0 < capture_opt <= 4:
-                    return capture_opt
-                else:
-                    print("{0}[*] Error: Invalid option entered".format(R))
-                    continue
-            except ValueError:
-                if capture_opt == "h" or capture_opt == "help":
-                    print(
-                        "{0}[*] Please type an option from above, press enter and follow the prompts that appear. Use CTRL+C to stop a task or to exit the program.".format(
-                            B))
-                    continue
-                else:
-                    print("{0}[*] Error: Invalid option entered".format(R))
-                    continue
+    def __init__(self):
+        self.scan_options = {
+            "1": "ARP Scan",
+            "2": "ICMP Scan",
+            }
+        self.attack_options = {
+            "3": "ARP Man-In-The-Middle",
+            "4": "DNS Spoofer"
+            }
+        self.misc_options = {
+            "h": "Help"
+            }
+        pass
 
     def show_banner_opts(self):
         # Print the banner and show the available options
@@ -93,7 +84,7 @@ class netatak:
         \|__| \|__|\|_______|   \|__|  \|__|\|__|    \|__|  \|__|\|__|\|__| \|__|                                                                             
     """.format(Y, N))
         print("{0}NETATAK - A suite of network scanning and attack tools.".format(B))
-        print("{0}Version: 0.5b".format(B))
+        print("{0}Version: 0.6b".format(B))
 
         print("\r\n")
         print("{0}Available options:".format(N))
@@ -101,20 +92,46 @@ class netatak:
         ------
          SCAN
         ------""".format(R))
-        print("{0}[1] ARP Scan".format(G))
-        print("{0}[2] ICMP Scan".format(G))
+        for k, v in self.scan_options.items():
+            print("{0}[{1}] {2}".format(G, k, v))
         print("""{0}
         --------
          ATTACK
         --------""".format(R))
-        print("{0}[3] ARP Man-In-The-Middle".format(G))
-        print("{0}[4] DNS Spoofer".format(G))
+        for k, v in self.attack_options.items():
+            print("{0}[{1}] {2}".format(G, k, v))
         print("""{0}
         ------
          MISC
         ------""".format(R))
-        print("{0}[h] Help".format(G))
+        for k, v in self.misc_options.items():
+            print("{0}[{1}] {2}".format(G, k, v))
         print("\r\n")
+
+    def get_input(self):
+        # Capture user input
+        while True:
+            capture_opt = input("{0}[*] Choose from the list above: ".format(N))
+            if not capture_opt:
+                continue
+            try:
+                for d in [self.scan_options, self.attack_options, self.misc_options]:
+                    for k, v in d.items():
+                        if capture_opt == k:
+                            return capture_opt
+                        else:
+                            continue
+                print("{0}[*] Error: Invalid option entered".format(R))
+                continue
+            except ValueError:
+                if capture_opt == "h" or capture_opt == "help":
+                    print(
+                        "{0}[*] Please type an option from above, press enter and follow the prompts that appear. Use CTRL+C to stop a task or to exit the program.".format(
+                            B))
+                    continue
+                else:
+                    print("{0}[*] Error: Invalid option entered".format(R))
+                    continue
 
     def option_selector(self, opt):
         # Run the required tool based on user input
