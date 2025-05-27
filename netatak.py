@@ -47,7 +47,6 @@ def module_installer():
         print("{0}[*] Please restart NETATAK.".format(R))
         sys.exit()
 
-
 # Try and import scapy. If not installed, use pip to install the package
 try:
     from scapy.all import *
@@ -70,7 +69,7 @@ class netatak:
         self.misc_options = {
             "h": "Help"
             }
-        pass
+        self.selected_option = 0
 
     def show_banner_opts(self):
         # Print the banner and show the available options
@@ -115,12 +114,13 @@ class netatak:
             if not capture_opt:
                 continue
             try:
+                #TODO: Determine if we are going to call netscanner or one of the attack tools at this point.
                 for d in [self.scan_options, self.attack_options, self.misc_options]:
                     for k, v in d.items():
                         if capture_opt == k:
+                            # TODO: Maybe look at returning the options dict we located this in?
+                            # Maybe look at changing the dicts to have a value that will determine function call?
                             return capture_opt
-                        else:
-                            continue
                 print("{0}[*] Error: Invalid option entered".format(R))
                 continue
             except ValueError:
@@ -128,13 +128,13 @@ class netatak:
                     print(
                         "{0}[*] Please type an option from above, press enter and follow the prompts that appear. Use CTRL+C to stop a task or to exit the program.".format(
                             B))
-                    continue
                 else:
                     print("{0}[*] Error: Invalid option entered".format(R))
-                    continue
+                continue
 
     def option_selector(self, opt):
         # Run the required tool based on user input
+        #TODO: Remove this as netscanner will deal with this
         if opt == 1:
             self.arp_scan()
         if opt == 2:
@@ -143,7 +143,6 @@ class netatak:
             self.arp_mitm_start()
         if opt == 4:
             self.dnspoof_start()
-
 
     def tgt_input(self, input_opt):
         # Function to capture target input
@@ -179,6 +178,7 @@ class netatak:
         return opt_tgt
 
     def timeout_input(self, scantype):
+        #TODO: Move this to the netscan_main class
         # Function to capture packet timeout input
         while True:
             if scantype == "arp":
@@ -209,6 +209,7 @@ class netatak:
 
     def interval_input(self):
         # Function to capture packet interval input
+        #TODO: Move this to the netscan_main class
         while True:
             intervalDefault = 0.1
             opt_interval = input("{0}[*] Define an interval between packets in seconds between 0.1 and 50 (e.g. 0.4, 1), or leave blank for the default setting (0.1 second): ".format(N))
@@ -228,6 +229,7 @@ class netatak:
 
     def scan_count(self):
         # Function to capture scan count input
+        #TODO: Move this to the netscan_main class
         while True:
             countDefault = 1
             opt_count = input(
@@ -249,6 +251,7 @@ class netatak:
 
     def arp_scan(self):
         # Start ARP scan tool
+        #TODO: Move the necessary function calls to the netscaner class
         opt_tgt = self.tgt_input("scan")
         opt_timeout = self.timeout_input("arp")
         opt_interval = self.interval_input()
@@ -261,6 +264,7 @@ class netatak:
 
     def icmp_scan(self):
         # Start ICMP scan tool
+        #TODO: Move the necessary function calls to the netscaner class
         opt_tgt = self.tgt_input("scan")
         opt_timeout = self.timeout_input("icmp")
         opt_interval = self.interval_input()
@@ -273,6 +277,7 @@ class netatak:
 
     def arp_mitm_start(self):
         # Start ARP MITM tool
+        #TODO: Move the necessary function calls to the arp_mitm class
         opt_tgt = self.tgt_input("atk")
         opt_rtr = self.tgt_input("rtr")
         opt_timeout = self.timeout_input("arp")
@@ -285,6 +290,7 @@ class netatak:
 
     def dnspoof_start(self):
         # Start the DNS Spoofing tool
+        #TODO: Move the necessary function calls to the dnspoof class
         list_path = os.path.dirname(__file__) + "/atktools/config/dnspoof/spooflist.csv"
         print("{0}[*] Ensure the target sites are updated in the CSV file located at %s. If they are not, update the list and re-run this tool. List is in the format: target_domain,ip_to_reply_with e.g. www.google.com,192.168.1.100".format(Y) % list_path)
         opt_tgt = self.tgt_input("atk")
@@ -301,10 +307,12 @@ class netatak:
         self.show_banner_opts()
         try:
             input_select = self.get_input()
+            #TODO: Netscanner will be called here instea
             self.option_selector(input_select)
         except (KeyboardInterrupt, EOFError):
             print("\n{0}[*] Keyboard interrupt detected. Exiting program...".format(R))
 
-
-NetAtak = netatak()
-NetAtak.main()
+if __name__ == "__main__":
+    NetAtak = netatak()
+    NetAtak.main()
+    
