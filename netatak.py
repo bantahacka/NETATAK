@@ -22,39 +22,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import sys
 import time
 import os
+import ctypes
 import subprocess
 import ipaddress
 import platform
 
 # Define text colours
 B, R, Y, G, N = '\033[1;34m', '\033[1;31m', '\033[1;33m', '\033[1;32m', '\033[1;37m'
-
-#Check to see if user is running as root
-if os.geteuid() != 0:
-    print("{0}[*] Error: You must run this script using sudo or as root. Exiting...".format(R))
-    sys.exit()
-
-def module_installer():
-    # Function to install scapy
-    print("{0}[*] Error: The following module is required for this program to run:".format(Y))
-    print("{0}[-] scapy".format(R))
-    mod_inst = input("{0}[*] Do you wish to install it? (Y/N)".lower().format(Y))
-    if mod_inst in ('y', 'yes'):
-        print("{0}[*] If the install of Scapy fails, ensure you have the python3-pip package or pip module installed.")
-        print("{0}[*] Installing scapy, going to sleep for 30 seconds...".format(B))
-        subprocess.Popen("python3 -m pip install scapy", shell=True)
-        time.sleep(30)
-        print("{0}[*] Please restart NETATAK.".format(R))
-        sys.exit()
-
-# Try and import scapy. If not installed, use pip to install the package
-try:
-    from scapy.all import *
-except (ModuleNotFoundError, ImportError):
-    module_installer()
-
-from atktools import arp_mitm, dnspoof
-from netscanner import netscan_main
 
 class netatak:
     def __init__(self):
@@ -70,6 +44,46 @@ class netatak:
             "h": "Help"
             }
         self.selected_option = 0
+        self.is_admin = False
+        self.is_windows = False
+        self.is_linux = False
+
+    def check_admin(self):
+        try:
+            self.is_admin = os.getuid() == 0
+        except AttributeError:
+            self.is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
+            self.is_windows = True
+
+        if not self.is_admin:
+            print("{0}[*] Error: NETATAK must be ran with a privileged account.".format(R))
+            sys.exit()
+
+    def module_importer(self):
+        try:
+            from scapy.all import all as scapy
+        except (ModuleNotFoundError, ImportError):
+            # Function to install scapy
+            print("{0}[*] Error: The following module is required for this program to run:".format(Y))
+            print("{0}[-] scapy".format(R))
+            mod_inst = input("{0}[*] Do you wish to install it? (Y/N)".lower().format(Y))
+            if mod_inst in ('y', 'yes'):
+                print("{0}[*] If the install of Scapy fails, ensure you have the python3-pip package or pip module installed.")
+                print("{0}[*] Installing scapy, going to sleep for 30 seconds...".format(B))
+                subprocess.Popen("python3 -m pip install scapy", shell=True)
+                time.sleep(30)
+                print("{0}[*] Please restart NETATAK.".format(R))
+                sys.exit()
+        try:
+            from netscanner import netscan_main
+        except (ModuleNotFoundError, ImportError):
+            print("{0}[*] Error: The netscanner module is missing or not complete. Pull a fresh copy of the tool and try again.".format(R))
+            sys.exit()
+        try:
+            from atktools import arp_mitm, dnspoof
+        except (ModuleNotFoundError, ImportError):
+            print("{0}[*] Error: The atktools module is missing or not complete. Pull a fresh copy of the tool and try again.".format(R))
+            sys.exit()
 
     def show_banner_opts(self):
         # Print the banner and show the available options
@@ -134,7 +148,7 @@ class netatak:
 
     def option_selector(self, opt):
         # Run the required tool based on user input
-        #TODO: Remove this as netscanner will deal with this
+        #TODO: Remove this as netscanner will deal with this (maybe?)
         if opt == 1:
             self.arp_scan()
         if opt == 2:
@@ -304,10 +318,12 @@ class netatak:
         self.main()
 
     def main(self):
-        self.show_banner_opts()
         try:
+            self.check_admin()
+            self.module_importer()
+            self.show_banner_opts()
             input_select = self.get_input()
-            #TODO: Netscanner will be called here instea
+            #TODO: Netscanner will be called here instead
             self.option_selector(input_select)
         except (KeyboardInterrupt, EOFError):
             print("\n{0}[*] Keyboard interrupt detected. Exiting program...".format(R))
