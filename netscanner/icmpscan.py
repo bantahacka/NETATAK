@@ -20,55 +20,112 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # This module is used to scan a single IP or network for hosts via ICMP
 # Ping count, timeout and packet interval can be adjusted when initiating the scan
 
-from scapy.all import *
-import ipaddress
+import random
+import time
+import threading
+from scapy.all import ICMP, IP, sr1
+from .scan_common import (
+    InterfaceResolver,
+    RateLimiter,
+    ScanResult,
+    ScanSummary,
+    TargetPlanner,
+    ScanConfigurationError,
+    cancellation_requested,
+)
 
 # Define text colours
 B, R, Y, G, N = '\033[1;34m', '\033[1;31m', '\033[1;33m', '\033[1;32m', '\033[1;37m'
 
 # Define the class
 class ICMPscanner:
-    def __init__(self, target, count, timeout, pktinterval):
+    def __init__(self, target, count, timeout, pktinterval, verbose=1,
+                 retries=1, interface=None, cancellation=None):
         self.target = target
-        self.addresses = ipaddress.IPv4Network(self.target)
         self.count = count
         self.timeout = timeout
-        self.pktinterval = pktinterval
-        self.active_hosts = []
+        self.interval = pktinterval
+        self.verbose = verbose
+        self.retries = max(1, int(retries))
+        self.interface = interface
+        self.cancellation = cancellation or threading.Event()
+
+    def scan(self):
+        planner = TargetPlanner(self.target)
+        if planner.network.version != 4:
+            raise ScanConfigurationError("ICMP scanning currently supports IPv4 targets only.")
+        first_target = next(planner.addresses(), planner.network.network_address)
+        interface = InterfaceResolver.resolve(first_target, self.interface)
+        summary = ScanSummary("ICMP", self.target, interface)
+        limiter = RateLimiter(self.interval)
+        if self.verbose:
+            print("{0}[*] Running {1} ICMP scan(s) against {2}; timeout={3}s, interface={4}".format(
+                N, self.count, self.target, self.timeout, interface or "automatic"
+            ))
+        try:
+            for scan_number in range(self.count):
+                for target in planner.addresses():
+                    if cancellation_requested(self.cancellation):
+                        return summary.finish(cancelled=True)
+                    if limiter.wait(self.cancellation):
+                        return summary.finish(cancelled=True)
+                    response = None
+                    attempts = 0
+                    packet_error = None
+                    started = time.monotonic()
+                    for attempt in range(self.retries):
+                        if cancellation_requested(self.cancellation):
+                            return summary.finish(cancelled=True)
+                        attempts += 1
+                        kwargs = {"timeout": self.timeout, "verbose": 0}
+                        try:
+                            response = sr1(
+                                IP(dst=str(target)) / ICMP(id=random.randint(100, 1000)),
+                                **kwargs
+                            )
+                        except Exception as error:
+                            summary.add(ScanResult(
+                                target,
+                                "error",
+                                latency=time.monotonic() - started,
+                                interface=interface,
+                                attempts=attempts,
+                                error=str(error),
+                            ), sent=1)
+                            packet_error = error
+                            response = None
+                            break
+                        summary.sent += 1
+                        if response is not None:
+                            break
+                    if packet_error is not None:
+                        continue
+                    latency = time.monotonic() - started
+                    status = "no_response"
+                    if response is not None:
+                        if response.haslayer(ICMP) and int(response.getlayer(ICMP).type) == 3:
+                            status = "filtered"
+                        else:
+                            status = "alive"
+                    result = ScanResult(
+                        target,
+                        status,
+                        latency=latency,
+                        interface=interface,
+                        attempts=attempts,
+                    )
+                    summary.add(result, sent=0)
+                    if self.verbose:
+                        message = "alive" if status == "alive" else status.replace("_", " ")
+                        print("{0}[*] {1}: {2}".format(G if status == "alive" else R, target, message))
+            return summary.finish()
+        except KeyboardInterrupt:
+            return summary.finish(cancelled=True)
 
     def icmpscan(self):
-        # Run an ICMP scan against the target machine/network and report any hosts that are alive.
-        print("{0}[*] Running %d ICMP scan(s) against %s with a packet interval of %4.1fs and a timeout of %ds".format(N) % (self.count, self.target, self.pktinterval, self.timeout))
-        total_resps = 0
-        total_scans = 0
-        try:
-            for i in range(self.count):
-                total_scans = i+1
-                for target in self.addresses:
-                    time.sleep(self.pktinterval)
-                    if target == self.addresses.network_address and "/" in self.target:
-                        print("{0}[*] Ignoring Network ID: {1}".format(Y, self.addresses.network_address))
-                        continue
-                    if target == self.addresses.broadcast_address and "/" in self.target:
-                        print("{0}[*] Ignoring Broadcast Address: {1}".format(Y, self.addresses.broadcast_address))
-                        continue
-                    ans = sr1(IP(dst=str(target))/ICMP(id=random.randint(100, 1000)), timeout=self.timeout, verbose=0)
-                    if ans is None:
-                        print("{0}[*] {1} is down or not responding".format(R, target))
-                    elif int(ans.getlayer(ICMP).type) == 3 and int(ans.getlayer(ICMP).code) in [1,2,3,9,10,13]:
-                        print("{0}[*] {1} is blocking ICMP".format(Y, target))
-                    else:
-                        print("{0}[*] {1} is alive!".format(G, target))
-                        if target not in self.active_hosts:
-                            self.active_hosts.append(target)
-                        total_resps += 1
-                else:
-                    print("{0}[*] Scans completed: {1} of {2}". format(G, total_scans, self.count))
-                    print("{0}[*] {1} Target(s) responded to ICMP".format(G, len(self.active_hosts)))
-            return self.active_hosts
-
-
-        except KeyboardInterrupt:
-            print("{0}[*] ICMP Scan cancelled by user.".format(R))
+        """Return the legacy list of responsive addresses."""
+        summary = self.scan()
+        if summary.cancelled:
             return False
+        return [result.address for result in summary.results if result.status == "alive"]
 

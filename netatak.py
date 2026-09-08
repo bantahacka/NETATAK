@@ -16,16 +16,16 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 # NETATAK
-# v0.6b
+# v0.7b
 # A suite of network scanning and attack tools.
 
 import sys
-import time
 import os
 import ctypes
 import subprocess
 import ipaddress
 import platform
+from pathlib import Path
 
 # Define text colours
 B, R, Y, G, N = '\033[1;34m', '\033[1;31m', '\033[1;33m', '\033[1;32m', '\033[1;37m'
@@ -41,49 +41,72 @@ class netatak:
             "4": "DNS Spoofer"
             }
         self.misc_options = {
-            "h": "Help"
+            "h": "Help",
+            "s": "Scan settings",
+            "q": "Quit",
             }
         self.selected_option = 0
         self.is_admin = False
         self.is_windows = False
         self.is_linux = False
+        self.arp_scanner = None
+        self.icmp_scanner = None
+        self.arp_mitm = None
+        self.dnspoof = None
+        self.scan_settings = {
+            "interface": None,
+            "retries": 1,
+            "output": "text",
+            "csv_path": None,
+        }
 
     def check_admin(self):
-        try:
-            self.is_admin = os.getuid() == 0
-        except AttributeError:
+        self.is_windows = platform.system().lower() == "windows"
+        if self.is_windows:
             self.is_admin = ctypes.windll.shell32.IsUserAnAdmin() != 0
-            self.is_windows = True
+        else:
+            self.is_admin = hasattr(os, "geteuid") and os.geteuid() == 0
 
         if not self.is_admin:
-            print("{0}[*] Error: NETATAK must be ran with a privileged account.".format(R))
-            sys.exit()
+            print("{0}[*] Error: NETATAK must be run from an elevated administrator terminal.".format(R))
+            return False
+        return True
 
     def module_importer(self):
         try:
-            from scapy.all import all as scapy
+            import scapy.all
         except (ModuleNotFoundError, ImportError):
             # Function to install scapy
             print("{0}[*] Error: The following module is required for this program to run:".format(Y))
             print("{0}[-] scapy".format(R))
             mod_inst = input("{0}[*] Do you wish to install it? (Y/N)".lower().format(Y))
             if mod_inst in ('y', 'yes'):
-                print("{0}[*] If the install of Scapy fails, ensure you have the python3-pip package or pip module installed.")
-                print("{0}[*] Installing scapy, going to sleep for 30 seconds...".format(B))
-                subprocess.Popen("python3 -m pip install scapy", shell=True)
-                time.sleep(30)
+                print("{0}[*] If the install of Scapy fails, ensure pip is installed.".format(Y))
+                print("{0}[*] Installing Scapy...".format(B))
+                result = subprocess.run([sys.executable, "-m", "pip", "install", "scapy"], check=False)
+                if result.returncode != 0:
+                    print("{0}[*] Scapy installation failed. Install it with: {1} -m pip install scapy".format(R, sys.executable))
+                    return False
                 print("{0}[*] Please restart NETATAK.".format(R))
-                sys.exit()
+            else:
+                print("{0}[*] Scapy is required to run NETATAK.".format(R))
+            return False
         try:
-            from netscanner import netscan_main
+            from netscanner.arpscan import ARPscanner
+            from netscanner.icmpscan import ICMPscanner
+            self.arp_scanner = ARPscanner
+            self.icmp_scanner = ICMPscanner
         except (ModuleNotFoundError, ImportError):
-            print("{0}[*] Error: The netscanner module is missing or not complete. Pull a fresh copy of the tool and try again.".format(R))
-            sys.exit()
+            print("{0}[*] Error: the netscanner package is missing or incomplete.".format(R))
+            return False
         try:
             from atktools import arp_mitm, dnspoof
+            self.arp_mitm = arp_mitm
+            self.dnspoof = dnspoof
         except (ModuleNotFoundError, ImportError):
-            print("{0}[*] Error: The atktools module is missing or not complete. Pull a fresh copy of the tool and try again.".format(R))
-            sys.exit()
+            print("{0}[*] Error: the atktools package is missing or incomplete.".format(R))
+            return False
+        return True
 
     def show_banner_opts(self):
         # Print the banner and show the available options
@@ -97,7 +120,7 @@ class netatak:
         \|__| \|__|\|_______|   \|__|  \|__|\|__|    \|__|  \|__|\|__|\|__| \|__|                                                                             
     """.format(Y, N))
         print("{0}NETATAK - A suite of network scanning and attack tools.".format(B))
-        print("{0}Version: 0.6b".format(B))
+        print("{0}Version: 0.7b".format(B))
 
         print("\r\n")
         print("{0}Available options:".format(N))
@@ -122,44 +145,77 @@ class netatak:
         print("\r\n")
 
     def get_input(self):
-        # Capture user input
         while True:
-            capture_opt = input("{0}[*] Choose from the list above: ".format(N))
+            capture_opt = input("{0}[*] Choose from the list above: ".format(N)).strip().lower()
+            if capture_opt == "help":
+                capture_opt = "h"
             if not capture_opt:
                 continue
-            try:
-                #TODO: Determine if we are going to call netscanner or one of the attack tools at this point.
-                for d in [self.scan_options, self.attack_options, self.misc_options]:
-                    for k, v in d.items():
-                        if capture_opt == k:
-                            # TODO: Maybe look at returning the options dict we located this in?
-                            # Maybe look at changing the dicts to have a value that will determine function call?
-                            return capture_opt
-                print("{0}[*] Error: Invalid option entered".format(R))
-                continue
-            except ValueError:
-                if capture_opt == "h" or capture_opt == "help":
-                    print(
-                        "{0}[*] Please type an option from above, press enter and follow the prompts that appear. Use CTRL+C to stop a task or to exit the program.".format(
-                            B))
-                else:
-                    print("{0}[*] Error: Invalid option entered".format(R))
-                continue
+            valid_options = set(self.scan_options) | set(self.attack_options) | set(self.misc_options)
+            if capture_opt in valid_options:
+                return capture_opt
+            print("{0}[*] Error: Invalid option entered".format(R))
 
     def option_selector(self, opt):
-        # Run the required tool based on user input
-        #TODO: Remove this as netscanner will deal with this (maybe?)
-        if opt == 1:
-            self.arp_scan()
-        if opt == 2:
-            self.icmp_scan()
-        if opt == 3:
-            self.arp_mitm_start()
-        if opt == 4:
-            self.dnspoof_start()
+        if opt == "1":
+            return self.arp_scan()
+        if opt == "2":
+            return self.icmp_scan()
+        if opt == "3":
+            if self.is_windows:
+                print("{0}[*] ARP MITM is not supported on Windows. Use a Linux host for this tool.".format(R))
+                return False
+            return self.arp_mitm_start()
+        if opt == "4":
+            if self.is_windows:
+                print("{0}[*] DNS spoofing is not supported on Windows because it depends on the Linux ARP MITM implementation.".format(R))
+                return False
+            return self.dnspoof_start()
+        if opt == "h":
+            print("{0}[*] Select an option from the menu, or press CTRL+C to exit.".format(B))
+            return True
+        if opt == "s":
+            self.configure_scan_settings()
+            return True
+        return False
+
+    def configure_scan_settings(self):
+        print("{0}[*] Current interface: {1}".format(N, self.scan_settings["interface"] or "automatic"))
+        interface = input("{0}[*] Interface name/path, or blank for automatic selection: ".format(N)).strip()
+        self.scan_settings["interface"] = interface or None
+        while True:
+            retries = input("{0}[*] Attempts per ICMP target (1-5, default 1): ".format(N)).strip()
+            try:
+                retries = int(retries) if retries else 1
+                if 1 <= retries <= 5:
+                    self.scan_settings["retries"] = retries
+                    break
+            except ValueError:
+                pass
+            print("{0}[*] Retries must be a number between 1 and 5.".format(R))
+        while True:
+            output = input("{0}[*] Output format (text/json/csv, default text): ".format(N)).strip().lower() or "text"
+            if output in ("text", "json", "csv"):
+                self.scan_settings["output"] = output
+                break
+            print("{0}[*] Choose text, json, or csv.".format(R))
+        if self.scan_settings["output"] == "csv":
+            path = input("{0}[*] CSV output path: ".format(N)).strip()
+            self.scan_settings["csv_path"] = path or "netatak-scan.csv"
+        else:
+            self.scan_settings["csv_path"] = None
+        print("{0}[*] Scan settings updated.".format(G))
+
+    def display_scan_summary(self, summary):
+        if self.scan_settings["output"] == "json":
+            print(summary.to_json())
+        elif self.scan_settings["output"] == "csv":
+            summary.write_csv(self.scan_settings["csv_path"])
+            print("{0}[*] Scan results written to {1}".format(G, self.scan_settings["csv_path"]))
+        else:
+            print("{0}[*] {1}".format(G, summary.format_text()))
 
     def tgt_input(self, input_opt):
-        # Function to capture target input
         while True:
             if input_opt == "scan":
                 opt_tgt = input(
@@ -170,29 +226,31 @@ class netatak:
                 opt_tgt = input(
                     "{0}[*] Specify a single target (e.g. 192.168.1.10): ".format(
                         N))
+                err = "{0}[*] Error: no target defined."
             elif input_opt == "rtr":
                 opt_tgt = input("{0}[*] Specify the default gateway used by the targets (e.g. 192.168.1.1): ".format(N))
                 err = "{0}[*] Error: no default gateway defined."
+            else:
+                raise ValueError("Unsupported target input type: {0}".format(input_opt))
 
             if not opt_tgt:
                 print(err.format(R))
                 continue
-            else:
-                try:
-                    if ipaddress.ip_address(opt_tgt):
-                        break
-                except ValueError:
+            try:
+                ipaddress.ip_address(opt_tgt)
+                break
+            except ValueError:
+                if input_opt == "scan":
                     try:
-                        if ipaddress.ip_network(opt_tgt):
-                            break
+                        ipaddress.ip_network(opt_tgt, strict=False)
+                        break
                     except ValueError:
-                        print("{0}[*] Error: invalid target defined.".format(R))
-                    continue
+                        pass
+                print("{0}[*] Error: invalid target defined.".format(R))
 
         return opt_tgt
 
     def timeout_input(self, scantype):
-        #TODO: Move this to the netscan_main class
         # Function to capture packet timeout input
         while True:
             if scantype == "arp":
@@ -202,18 +260,16 @@ class netatak:
                 timeoutRange = "1 and 100"
                 timeoutDefault = 1
             opt_timeout = input("{0}[*] Define a timeout for replies in seconds between {1} (e.g. 2), \
-            or leave blank for the default setting ({2} seconds): ".format(N, timeoutRange, timeoutDefault))
-            opt_timeout = int(opt_timeout)
-            if not opt_timeout or opt_timeout == 0:
-                opt_timeout = timeoutDefault
+            or leave blank for the default setting ({2} seconds): ".format(N, timeoutRange, timeoutDefault)).strip()
             try:
+                opt_timeout = int(opt_timeout) if opt_timeout else timeoutDefault
                 if scantype == "arp":
-                    if 10 > opt_timeout > 100:
+                    if not 10 <= opt_timeout <= 100:
                         print("{0}[*] Error: timeout must be between 10 and 100 seconds.".format(R))
                         continue
-                    elif 1 > opt_timeout > 100:
-                        print("{0}[*] Error: timeout must be between 1 and 100 seconds.".format(R))
-                        continue
+                elif not 1 <= opt_timeout <= 100:
+                    print("{0}[*] Error: timeout must be between 1 and 100 seconds.".format(R))
+                    continue
             except ValueError:
                 print("{0}[*] Error: timeout must be a numerical value.".format(R))
                 continue
@@ -223,15 +279,12 @@ class netatak:
 
     def interval_input(self):
         # Function to capture packet interval input
-        #TODO: Move this to the netscan_main class
         while True:
             intervalDefault = 0.1
-            opt_interval = input("{0}[*] Define an interval between packets in seconds between 0.1 and 50 (e.g. 0.4, 1), or leave blank for the default setting (0.1 second): ".format(N))
-            opt_interval = float(opt_interval)
-            if not opt_interval or opt_interval == 0:
-                opt_interval = intervalDefault
+            opt_interval = input("{0}[*] Define an interval between packets in seconds between 0.1 and 50 (e.g. 0.4, 1), or leave blank for the default setting (0.1 second): ".format(N)).strip()
             try:
-                if 0.1 > opt_interval > 50:
+                opt_interval = float(opt_interval) if opt_interval else intervalDefault
+                if not 0.1 <= opt_interval <= 50:
                     print("{0}[*] Error: interval must be between 0.1 and 50 seconds.".format(R))
                     continue
             except ValueError:
@@ -243,17 +296,14 @@ class netatak:
 
     def scan_count(self):
         # Function to capture scan count input
-        #TODO: Move this to the netscan_main class
         while True:
             countDefault = 1
             opt_count = input(
                 "{0}[*] Define how many scans should be made against the target(s) (up to 65535), or leave blank for the default setting (1 packet): ".format(
-                    N))
-            opt_count = int(opt_count)
-            if not opt_count or opt_count == 0:
-                opt_count = countDefault
+                    N)).strip()
             try:
-                if 1 > opt_count > 65535:
+                opt_count = int(opt_count) if opt_count else countDefault
+                if not 1 <= opt_count <= 65535:
                     print("{0}[*] Error: interval must be between 1 and 65535 seconds.".format(R))
                     continue
             except ValueError:
@@ -265,68 +315,79 @@ class netatak:
 
     def arp_scan(self):
         # Start ARP scan tool
-        #TODO: Move the necessary function calls to the netscaner class
         opt_tgt = self.tgt_input("scan")
         opt_timeout = self.timeout_input("arp")
         opt_interval = self.interval_input()
         opt_count = self.scan_count()
 
-        new_arp_scan = netscan_main.netscanner(1, opt_tgt, opt_timeout, opt_interval, opt_count)
-        new_arp_scan.init_scan()
-        time.sleep(5)
-        self.main()
+        summary = self.arp_scanner(
+            opt_tgt,
+            opt_timeout,
+            opt_interval,
+            inc_mac=0,
+            count=opt_count,
+            verbose=1,
+            retries=self.scan_settings["retries"],
+            interface=self.scan_settings["interface"],
+        ).scan()
+        self.display_scan_summary(summary)
+        return summary
 
     def icmp_scan(self):
         # Start ICMP scan tool
-        #TODO: Move the necessary function calls to the netscaner class
         opt_tgt = self.tgt_input("scan")
         opt_timeout = self.timeout_input("icmp")
         opt_interval = self.interval_input()
         opt_count = self.scan_count()
 
-        new_icmp_scan = netscan_main.netscanner(2, opt_tgt, opt_timeout, opt_interval, opt_count)
-        new_icmp_scan.init_scan()
-        time.sleep(5)
-        self.main()
+        summary = self.icmp_scanner(
+            opt_tgt,
+            opt_count,
+            opt_timeout,
+            opt_interval,
+            verbose=1,
+            retries=self.scan_settings["retries"],
+            interface=self.scan_settings["interface"],
+        ).scan()
+        self.display_scan_summary(summary)
+        return summary
 
     def arp_mitm_start(self):
         # Start ARP MITM tool
-        #TODO: Move the necessary function calls to the arp_mitm class
         opt_tgt = self.tgt_input("atk")
         opt_rtr = self.tgt_input("rtr")
         opt_timeout = self.timeout_input("arp")
         opt_interval = self.interval_input()
 
-        new_arp_mitm = arp_mitm.arp_mitm(opt_tgt, opt_rtr, 0, opt_timeout, opt_interval)
-        new_arp_mitm.find_targets()
-        time.sleep(5)
-        self.main()
+        return self.arp_mitm.arp_mitm(opt_tgt, opt_rtr, 0, opt_timeout, opt_interval).find_targets()
 
     def dnspoof_start(self):
         # Start the DNS Spoofing tool
-        #TODO: Move the necessary function calls to the dnspoof class
-        list_path = os.path.dirname(__file__) + "/atktools/config/dnspoof/spooflist.csv"
+        list_path = Path(__file__).resolve().parent / "atktools" / "config" / "dnspoof" / "spooflist.csv"
         print("{0}[*] Ensure the target sites are updated in the CSV file located at %s. If they are not, update the list and re-run this tool. List is in the format: target_domain,ip_to_reply_with e.g. www.google.com,192.168.1.100".format(Y) % list_path)
         opt_tgt = self.tgt_input("atk")
         opt_rtr = self.tgt_input("rtr")
         opt_timeout = self.timeout_input("arp")
         opt_interval = self.interval_input()
 
-        new_dnspoof = dnspoof.dnspoof(opt_tgt, opt_rtr, 0, opt_timeout, opt_interval)
-        new_dnspoof.start_spoofer()
-        time.sleep(5)
-        self.main()
+        return self.dnspoof.dnspoof(opt_tgt, opt_rtr, 0, opt_timeout, opt_interval).start_spoofer()
 
     def main(self):
         try:
-            self.check_admin()
-            self.module_importer()
-            self.show_banner_opts()
-            input_select = self.get_input()
-            #TODO: Netscanner will be called here instead
-            self.option_selector(input_select)
+            if not self.check_admin():
+                return
+            if not self.module_importer():
+                return
+            while True:
+                self.show_banner_opts()
+                option = self.get_input()
+                if option == "q":
+                    return
+                self.option_selector(option)
         except (KeyboardInterrupt, EOFError):
             print("\n{0}[*] Keyboard interrupt detected. Exiting program...".format(R))
+        except ValueError as error:
+            print("{0}[*] Scan configuration error: {1}".format(R, error))
 
 if __name__ == "__main__":
     NetAtak = netatak()

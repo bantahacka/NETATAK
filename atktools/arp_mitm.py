@@ -22,11 +22,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # default gateway for the network, forwarding traffic to the real default gateway. You will then be able to use Wireshark
 # to monitor the forwarded traffic.
 
-import sys
 import os
 import platform
-from scapy.all import *
-from netscanner import netscan_main
+import time
+from scapy.all import ARP, send
+from netscanner.arpscan import ARPscanner
 
 # Define text colours
 B, R, Y, G, N = '\033[1;34m', '\033[1;31m', '\033[1;33m', '\033[1;32m', '\033[1;37m'
@@ -51,16 +51,30 @@ class arp_mitm:
 
     # Call netscanner to conduct an ARP scan of the target/network and build the target list, get mac addresses from all responses
     def find_targets(self):
-        self.tgt_list = netscan_main.netscanner(1, self.target, timeout=self.timeout, pktintr=self.pktintr, inc_mac=1, verbose=self.verbose).init_scan()
+        self.tgt_list = ARPscanner(
+            self.target,
+            self.timeout,
+            self.pktintr,
+            inc_mac=1,
+            count=1,
+            verbose=self.verbose,
+        ).arpscan()
         if self.verbose == 1:
             print("{0}[*] Obtaining Router MAC Address...".format(N))
-        self.rtr_scan = netscan_main.netscanner(1, self.rtrip, timeout=self.timeout, pktintr=self.pktintr, inc_mac=1, verbose=0).init_scan()
+        self.rtr_scan = ARPscanner(
+            self.rtrip,
+            self.timeout,
+            self.pktintr,
+            inc_mac=1,
+            count=1,
+            verbose=0,
+        ).arpscan()
 
         if not self.tgt_list:
             print("{0}[*] No targets found via ARP scan. Exiting...".format(R))
             return False
         # Targets found, remove the router from the target list if it responded via ARP. If the router was the only response, then exit the script.
-        for key, value in self.tgt_list.items():
+        for key, value in list(self.tgt_list.items()):
             if self.rtrip in value:
                 self.ip_check = self.tgt_list[key].split('-')
                 if self.rtrip == self.ip_check[0]:
@@ -72,13 +86,16 @@ class arp_mitm:
             print("{0}[*] No valid targets remaining. Exiting...".format(R))
             return False
 
+        router_found = False
         for key, value in self.rtr_scan.items():
             if self.rtrip in value:
                 self.rtrmac = self.rtr_scan[key].split('-')
                 self.rtrmac = self.rtrmac[1]
-            else:
-                print("{0}[*] Router IP did not respond to ARP request. Exiting...".format(R))
-                return False
+                router_found = True
+                break
+        if not router_found:
+            print("{0}[*] Router IP did not respond to ARP request. Exiting...".format(R))
+            return False
 
         if self.atkopt == 0:
             # Start ARP MITM
@@ -88,6 +105,9 @@ class arp_mitm:
             self.stop_arp_mitm()
 
     def start_arp_mitm(self):
+        if platform.system().lower() == "windows":
+            print("{0}[*] ARP MITM is not supported on Windows. IP forwarding uses Linux-only system files.".format(R))
+            return False
         if self.verbose == 1:
             print("{0}[*] Starting ARP MITM attack...".format(N))
             print("{0}[*] Turning on IP Forwarding in {1}...".format(N, self.ipforward_file))
@@ -108,6 +128,9 @@ class arp_mitm:
             self.stop_arp_mitm()
 
     def stop_arp_mitm(self):
+        if platform.system().lower() == "windows":
+            print("{0}[*] ARP MITM cleanup is not supported on Windows.".format(R))
+            return False
         print("{0}[*] Stopping ARP MITM attack...".format(N))
         # Re-ARP the target(s) and router so that their traffic flows to the correct destinations, this will (hopefully) cover our tracks
         for i in self.tgt_list:

@@ -25,9 +25,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import csv
 import multiprocessing
-from scapy.all import *
+import sys
+from pathlib import Path
+from scapy.all import DNS, DNSRR, IP, UDP, send, sniff
 from atktools import arp_mitm
-
+import time
+from scapy.all import DNS, DNSRR, IP, UDP, sniff, send
 # Define text colours
 B, R, Y, G, N = '\033[1;34m', '\033[1;31m', '\033[1;33m', '\033[1;32m', '\033[1;37m'
 
@@ -42,7 +45,7 @@ class dnspoof:
         self.pktintr = float(pktintr)  # Interval between packets
 
         # Config file - open it using the CSV module and keep it open until the script is closed
-        self.dnspoof_config = os.path.dirname(__file__) + "/config/dnspoof/spooflist.csv"
+        self.dnspoof_config = Path(__file__).resolve().parent / "config" / "dnspoof" / "spooflist.csv"
 
         # Other variables
         self.rdata_ip = ""  # Variable to hold spoof IP
