@@ -18,8 +18,39 @@ py -m pip install scapy
 py .\netatak.py
 ```
 
-ARP and ICMP scanning use Scapy and require Npcap. The ARP MITM and DNS
-spoofing tools depend on Linux IP forwarding and remain unavailable on Windows.
+All tools use Scapy and require Npcap on Windows. The ARP MITM and DNS spoofing
+tools work on both Windows and Linux: IP forwarding is enabled via
+`Set-NetIPInterface` on Windows and `/proc/sys/net/ipv4/ip_forward` on Linux, and
+is turned back off when the tool stops. Run from an elevated/root terminal.
+
+## Linux
+
+Run NETATAK as root. Install Scapy with the same interpreter used to launch it:
+
+```bash
+sudo python3 -m pip install scapy
+sudo python3 ./netatak.py
+```
+
+## Attack tools (ARP MITM & DNS spoofing)
+
+Options `3` (ARP Man-In-The-Middle) and `4` (DNS Spoofer) poison the target and
+gateway ARP caches so traffic is relayed through the host running NETATAK, which
+requires IP forwarding (handled automatically, see above). The DNS spoofer answers
+queries for domains listed in `atktools/config/dnspoof/spooflist.csv` (format:
+`domain,ip_to_reply_with`, one per line; matches the domain and its subdomains) and
+forwards everything else untouched.
+
+Press `CTRL+C` to stop either tool. This runs the graceful cleanup: the ARP caches
+are restored and IP forwarding is disabled. If a run is instead hard-killed (for
+example `kill -9`, Task Manager, or a crash), that cleanup is skipped and the
+target is left poisoned with forwarding still on. Recover with:
+
+```bash
+python netatak.py --restore <TARGET_IP> <GATEWAY_IP>
+```
+
+This re-ARPs the target and gateway and turns IP forwarding back off, then exits.
 
 ## Scanner settings
 

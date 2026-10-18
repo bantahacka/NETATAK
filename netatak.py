@@ -21,6 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
 import os
+import argparse
 import ctypes
 import subprocess
 import ipaddress
@@ -79,7 +80,7 @@ class netatak:
             # Function to install scapy
             print("{0}[*] Error: The following module is required for this program to run:".format(Y))
             print("{0}[-] scapy".format(R))
-            mod_inst = input("{0}[*] Do you wish to install it? (Y/N)".lower().format(Y))
+            mod_inst = input("{0}[*] Do you wish to install it? (Y/N) ".format(Y)).strip().lower()
             if mod_inst in ('y', 'yes'):
                 print("{0}[*] If the install of Scapy fails, ensure pip is installed.".format(Y))
                 print("{0}[*] Installing Scapy...".format(B))
@@ -162,14 +163,8 @@ class netatak:
         if opt == "2":
             return self.icmp_scan()
         if opt == "3":
-            if self.is_windows:
-                print("{0}[*] ARP MITM is not supported on Windows. Use a Linux host for this tool.".format(R))
-                return False
             return self.arp_mitm_start()
         if opt == "4":
-            if self.is_windows:
-                print("{0}[*] DNS spoofing is not supported on Windows because it depends on the Linux ARP MITM implementation.".format(R))
-                return False
             return self.dnspoof_start()
         if opt == "h":
             print("{0}[*] Select an option from the menu, or press CTRL+C to exit.".format(B))
@@ -372,6 +367,24 @@ class netatak:
 
         return self.dnspoof.dnspoof(opt_tgt, opt_rtr, 0, opt_timeout, opt_interval).start_spoofer()
 
+    def restore(self, target, rtrip):
+        # Recovery path for when a MITM/DNS-spoof run was hard-killed (kill -9, Task
+        # Manager, a crash) and never ran its graceful cleanup, leaving the target's
+        # ARP cache poisoned and IP forwarding enabled. Re-ARPs the target/gateway and
+        # turns IP forwarding back off, then exits.
+        if not self.check_admin():
+            return False
+        if not self.module_importer():
+            return False
+        for label, value in (("target", target), ("gateway", rtrip)):
+            try:
+                ipaddress.ip_address(value)
+            except ValueError:
+                print("{0}[*] Error: invalid {1} IP address: {2}".format(R, label, value))
+                return False
+        print("{0}[*] Restoring ARP caches and IP forwarding for target {1} via gateway {2}...".format(B, target, rtrip))
+        return self.arp_mitm.arp_mitm(target, rtrip, 1).find_targets()
+
     def main(self):
         try:
             if not self.check_admin():
@@ -383,13 +396,30 @@ class netatak:
                 option = self.get_input()
                 if option == "q":
                     return
-                self.option_selector(option)
+                try:
+                    self.option_selector(option)
+                except ValueError as error:
+                    # A bad target or scan setting should return to the menu, not
+                    # tear the whole program down.
+                    print("{0}[*] Scan configuration error: {1}".format(R, error))
         except (KeyboardInterrupt, EOFError):
             print("\n{0}[*] Keyboard interrupt detected. Exiting program...".format(R))
-        except ValueError as error:
-            print("{0}[*] Scan configuration error: {1}".format(R, error))
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="NETATAK - A suite of network scanning and attack tools."
+    )
+    parser.add_argument(
+        "--restore",
+        nargs=2,
+        metavar=("TARGET", "GATEWAY"),
+        help="Restore a target's ARP cache and disable IP forwarding after a hard-killed "
+             "MITM/DNS-spoof run, then exit. Example: --restore 192.168.1.10 192.168.1.1",
+    )
+    args = parser.parse_args()
     NetAtak = netatak()
-    NetAtak.main()
+    if args.restore:
+        NetAtak.restore(args.restore[0], args.restore[1])
+    else:
+        NetAtak.main()
     
